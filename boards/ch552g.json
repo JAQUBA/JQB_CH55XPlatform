@@ -5,15 +5,20 @@
         "mcu": "CH552",
         "variant": "ch552",
         "core": "ch55xduino",
-        "board": "ch55x"
+        "board": "ch55x",
+        "total_xram": "1024",
+        "usb_ram": "148",
+        "ep0_addr": "0",
+        "ep1_addr": "10",
+        "ep2_addr": "20"
     },
     "frameworks": ["arduino"],
     "name": "WCH CH552G",
     "upload": {
-        "maximum_ram_size": 1024,
+        "maximum_ram_size": 876,
         "maximum_size": 14336,
         "protocol": "ch55x",
-        "xdata_location": 0,
+        "xdata_location": 148,
         "boot_config": 3
     },
     "url": "https://www.wch-ic.com/products/CH552.html",

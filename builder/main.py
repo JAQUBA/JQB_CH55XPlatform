@@ -4,6 +4,11 @@ Based on ch55xduino Arduino core.
 
 Part of JQB_CH55XPlatform:
   https://github.com/JAQUBA/JQB_CH55XPlatform
+
+Auto-configuration features:
+  - USB XRAM: derived from board_build.usb_ram (defines, linker flags, size)
+  - Include paths: all src/ subdirectories with headers auto-added
+  - IntelliSense: .vscode/c_cpp_properties.json auto-generated
 """
 
 import os
@@ -43,35 +48,52 @@ assert isdir(toolchain_dir), (
 
 sdcc_bin = join(toolchain_dir, "bin")
 
+
+# ---------------------------------------------------------------------------
+# Helper: find first existing directory from candidates
+# ---------------------------------------------------------------------------
+
+def _find_dir(candidates):
+    for path in candidates:
+        if isdir(path):
+            return path
+    return None
+
+
 # SDCC library path — ch55xduino's custom SDCC uses large_int_calc_stack_auto
-sdcc_lib_path = None
-for candidate in [
+sdcc_lib_path = _find_dir([
     join(toolchain_dir, "lib", "large_int_calc_stack_auto"),
     join(toolchain_dir, "share", "sdcc", "lib", "large_int_calc_stack_auto"),
-]:
-    if isdir(candidate):
-        sdcc_lib_path = candidate
-        break
-
-if sdcc_lib_path is None:
-    # Fallback to standard large model
-    for candidate in [
-        join(toolchain_dir, "lib", "large"),
-        join(toolchain_dir, "share", "sdcc", "lib", "large"),
-    ]:
-        if isdir(candidate):
-            sdcc_lib_path = candidate
-            break
+    join(toolchain_dir, "lib", "large"),
+    join(toolchain_dir, "share", "sdcc", "lib", "large"),
+])
 
 # SDCC include path
-sdcc_include_path = None
-for candidate in [
+sdcc_include_path = _find_dir([
     join(toolchain_dir, "include"),
     join(toolchain_dir, "share", "sdcc", "include"),
-]:
-    if isdir(candidate):
-        sdcc_include_path = candidate
-        break
+])
+
+# ---------------------------------------------------------------------------
+# USB / XRAM auto-configuration
+#
+# Everything is derived from board_build.usb_ram (default in board JSON).
+# Override in platformio.ini:  board_build.usb_ram = 200
+# Set to 0 to disable USB (full 1024 B XRAM available).
+# ---------------------------------------------------------------------------
+
+_total_xram = int(board.get("build.total_xram", "1024"))
+_usb_ram = int(board.get("build.usb_ram", "0"))
+_xram_size = _total_xram - _usb_ram
+_xram_loc = _usb_ram
+
+# Update board manifest so linker flags and PlatformIO size check are consistent
+try:
+    board._manifest.setdefault("upload", {})
+    board._manifest["upload"]["maximum_ram_size"] = _xram_size
+    board._manifest["upload"]["xdata_location"] = _xram_loc
+except (AttributeError, TypeError):
+    pass
 
 # ---------------------------------------------------------------------------
 # Configure build environment
@@ -117,8 +139,8 @@ env.Replace(
     LINKFLAGS=[
         "--nostdlib",
         "--code-size", str(board.get("upload.maximum_size")),
-        "--xram-size", str(board.get("upload.maximum_ram_size")),
-        "--xram-loc", str(board.get("upload.xdata_location")),
+        "--xram-size", str(_xram_size),
+        "--xram-loc", str(_xram_loc),
         "-mmcs51",
         "--out-fmt-ihx",
     ],
@@ -150,10 +172,39 @@ env.Replace(
 if sdcc_include_path:
     env.Append(CPPPATH=[sdcc_include_path])
 
-# Board-specific extra flags (e.g., USB endpoint defines)
+# ---------------------------------------------------------------------------
+# USB defines (auto-generated from board config)
+# ---------------------------------------------------------------------------
+
+if _usb_ram > 0:
+    _ep0 = board.get("build.ep0_addr", "0")
+    _ep1 = board.get("build.ep1_addr", "10")
+    _ep2 = board.get("build.ep2_addr", "20")
+    env.Append(CPPDEFINES=[
+        ("USER_USB_RAM", str(_usb_ram)),
+        ("EP0_ADDR", str(_ep0)),
+        ("EP1_ADDR", str(_ep1)),
+        ("EP2_ADDR", str(_ep2)),
+    ])
+
+# Board-specific extra flags (e.g. additional -D flags)
 extra_flags = board.get("build.extra_flags", "")
 if extra_flags:
     env.Append(CCFLAGS=extra_flags.split())
+
+# ---------------------------------------------------------------------------
+# Auto-add src/ subdirectories to include path
+#
+# Scans all subdirectories of src/ for .h files and adds them to CPPPATH.
+# This allows cross-directory includes (e.g. #include "protocol.h" from
+# src/shared/) without manual -I flags in platformio.ini.
+# ---------------------------------------------------------------------------
+
+_src_dir = env.subst("$PROJECT_SRC_DIR")
+if isdir(_src_dir):
+    for _root, _dirs, _files in os.walk(_src_dir):
+        if any(f.endswith('.h') for f in _files):
+            env.AppendUnique(CPPPATH=[_root])
 
 # ---------------------------------------------------------------------------
 # Process framework
@@ -223,7 +274,7 @@ def _generate_ide_config(env):
             if d and d not in defines:
                 defines.append(d)
 
-    # 3) User build_flags from platformio.ini (e.g. -DUSER_USB_RAM=148)
+    # 3) User build_flags from platformio.ini (e.g. -DSOME_FLAG=1)
     try:
         raw = env.GetProjectOption("build_flags", "")
         parts = raw.split() if isinstance(raw, str) else env.Flatten(raw)
@@ -288,8 +339,6 @@ env["PIOFRAMEWORK"] = _saved_framework
 # vnproch55x expects a .bin file.  We convert using a Python-based ihx parser
 # since makebin is not available in this SDCC build.
 # ---------------------------------------------------------------------------
-
-import struct
 
 
 def ihx_to_bin(target, source, env):
