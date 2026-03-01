@@ -32,5 +32,18 @@
             "script": "builder/frameworks/arduino.py"
         }
     },
-    "packages": {}
+    "packages": {
+        "toolchain-sdcc-ch55x": {
+            "type": "toolchain",
+            "optional": false
+        },
+        "framework-ch55xduino": {
+            "type": "framework",
+            "optional": true
+        },
+        "tool-ch55xtools": {
+            "type": "uploader",
+            "optional": true
+        }
+    }
 }

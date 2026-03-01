@@ -11,6 +11,15 @@ from platformio.public import PlatformBase
 class Ch55xPlatform(PlatformBase):
 
     def configure_default_packages(self, variables, targets):
+        # Packages are installed by setup.ps1, not from PlatformIO registry.
+        # Ensure they are declared in self.packages so super() doesn't KeyError.
+        for pkg_name, pkg_meta in {
+            "toolchain-sdcc-ch55x": {"type": "toolchain", "optional": False},
+            "framework-ch55xduino": {"type": "framework", "optional": True},
+            "tool-ch55xtools":      {"type": "uploader",  "optional": True},
+        }.items():
+            if pkg_name not in self.packages:
+                self.packages[pkg_name] = dict(pkg_meta)
         return super().configure_default_packages(variables, targets)
 
     def get_boards(self, id_=None):
