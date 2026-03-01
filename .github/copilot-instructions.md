@@ -14,11 +14,13 @@ Repozytorium: `https://github.com/JAQUBA/JQB_CH55XPlatform`
 ```
 JQB_CH55XPlatform/
 ├── platform.json          — Manifest platformy PlatformIO
-├── platform.py            — Klasa platformy (Ch55xPlatform)
+├── platform.py            — Klasa platformy + auto-download pakietów (cross-platform)
 ├── sdcc_compat.h          — Stuby słów kluczowych SDCC dla IntelliSense
-├── setup.ps1              — Skrypt instalujący toolchain (Windows)
 ├── boards/
-│   └── ch552g.json        — Definicja płytki CH552G (z USB defaults)
+│   ├── ch551.json         — WCH CH551 (10KB Flash, 512B XRAM)
+│   ├── ch552g.json        — WCH CH552G (14KB Flash, 1KB XRAM)
+│   ├── ch554.json         — WCH CH554 (14KB Flash, 1KB XRAM)
+│   └── ch559.json         — WCH CH559 (60KB Flash, 6KB XRAM)
 └── builder/
     ├── main.py            — Skrypt budowania SCons (auto-config USB/XRAM, IHX→BIN, upload, IntelliSense)
     └── frameworks/
@@ -35,13 +37,17 @@ JQB_CH55XPlatform/
 .c → SDCC (.rel) → Linker (.ihx) → IHX→BIN (Python) → vnproch55x → CH55x
 ```
 
-### Pakiety (instalowane przez setup.ps1)
+### Pakiety (auto-download przez platform.py)
 
-| Pakiet | Ścieżka | Opis |
-|--------|---------|------|
-| `toolchain-sdcc-ch55x` | `~/.platformio/packages/` | Kompilator SDCC (custom build) |
-| `framework-ch55xduino` | `~/.platformio/packages/` | Arduino core dla CH55x |
-| `tool-ch55xtools` | `~/.platformio/packages/` | vnproch55x (upload) |
+Przy pierwszym `pio run` platforma automatycznie pobiera i instaluje do `~/.platformio/packages/`:
+
+| Pakiet | Opis |
+|--------|------|
+| `toolchain-sdcc-ch55x` | Kompilator SDCC (custom build, per-platform: Win/Mac/Linux) |
+| `framework-ch55xduino` | Arduino core dla CH55x |
+| `tool-ch55xtools` | vnproch55x (upload, per-platform) |
+
+Nie wymaga ręcznej instalacji ani skryptów setup.
 
 ### Auto-konfiguracja (builder)
 
@@ -66,14 +72,14 @@ Builder auto-generuje `.vscode/c_cpp_properties.json` z:
 
 ## Ograniczenia CH55x
 
-| Parametr | Wartość |
-|---|---|
-| Język | **Tylko C** — SDCC dla MCS51 nie obsługuje C++ |
-| Flash | 14 KB (CH552G) |
-| XRAM | 1 KB (876 B z USB endpoints przy `usb_ram=148`) |
-| IRAM | 256 B |
-| EEPROM | 128 B |
-| Kompilator | SDCC z `--model-large --int-long-reent` |
+| Parametr | CH551 | CH552G | CH554 | CH559 |
+|---|---|---|---|---|
+| Flash | 10 KB | 14 KB | 14 KB | 60 KB |
+| XRAM | 512 B | 1 KB | 1 KB | 6 KB |
+| IRAM | 256 B | 256 B | 256 B | 256 B |
+| EEPROM | — | 128 B | 128 B | 1 KB |
+| Język | Tylko C (SDCC) | Tylko C | Tylko C | Tylko C |
+| Kompilator | SDCC `--model-large --int-long-reent` ||||
 
 ---
 
@@ -106,8 +112,8 @@ board_build.usb_ram = 0
 
 1. **Board JSON zawiera sensowne domyślne** — `usb_ram=148` (typowe composite HID), EP adresy `0/10/20`. Projekty nadpisują tylko gdy potrzebują innej konfiguracji.
 2. **Ścieżka do `sdcc_compat.h`** jest rozwiązywana dynamicznie przez `platform.get_dir()` w `builder/main.py` — działa zarówno lokalnie jak i z git URL.
-3. **`setup.ps1`** instaluje tylko pakiety CH55x — nie zawiera MinGW ani narzędzi niezwiązanych z platformą.
-4. **`platform.py`** jest minimalny — cała logika jest w `builder/main.py`.
+3. **Auto-download** pakietów (SDCC, ch55xduino, vnproch55x) jest w `platform.py` — cross-platform (Win/Mac/Linux). Nie ma skryptu setup.
+4. **`platform.py`** zawiera logikę auto-download + deklarację pakietów. Cała logika budowania jest w `builder/main.py`.
 5. **Upload** obsługuje błędy weryfikacji vnproch55x — sprawdza `"Write complete!!!"` zamiast kodu wyjścia.
 6. **Biblioteki ch55xduino** (WS2812, SPI, SoftI2C itp.) są wykrywane automatycznie przez skan `#include` w źródłach — nie trzeba dodawać ich do `build_src_filter`.
 7. **Include paths** — wszystkie podkatalogi `src/` z plikami `.h` są dodawane automatycznie do ścieżek include — nie trzeba ręcznie dodawać `-Isrc/shared` itp.

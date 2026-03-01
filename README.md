@@ -2,23 +2,28 @@
 
 **PlatformIO platform for WCH CH55x (CH551, CH552, CH554, CH559) MCS51 USB microcontrollers.**
 
-Uses the [ch55xduino](https://github.com/DeqingSun/ch55xduino) Arduino-like framework and a custom SDCC compiler build optimized for CH55x. Includes auto-generated VS Code IntelliSense configuration with full SDCC keyword support.
+Uses the [ch55xduino](https://github.com/DeqingSun/ch55xduino) Arduino-like framework and a custom SDCC compiler build optimized for CH55x. **All toolchain packages are auto-downloaded on first build** — no manual setup required.
 
 ## Features
 
-- **SDCC compiler** — custom MCS51 build with `large_int_calc_stack_auto` model
-- **ch55xduino framework** — Arduino-like API (`pinMode`, `digitalRead`, `analogRead`, `delay`, `millis`, USB HID, EEPROM, etc.)
-- **vnproch55x uploader** — flash firmware over USB bootloader with automatic verify-error handling
+- **Zero setup** — SDCC toolchain, ch55xduino framework and upload tools are auto-downloaded on first `pio run`
+- **USB auto-configuration** — `USER_USB_RAM`, endpoint addresses, XRAM size/location derived from board defaults
+- **Library auto-detection** — `#include <WS2812.h>` → library auto-compiled and linked (no manual `build_src_filter`)
+- **Include path auto-scan** — all `src/` subdirectories with `.h` files added automatically
 - **VS Code IntelliSense** — auto-generated `c_cpp_properties.json` with SDCC keyword stubs (`__xdata`, `__sfr`, `__at`, etc.)
+- **SDCC compiler** — custom MCS51 build with `large_int_calc_stack_auto` model
+- **vnproch55x uploader** — flash firmware over USB bootloader with automatic verify-error handling
 - **IHX → BIN conversion** — built-in Python converter (no external `makebin` dependency)
+- **Cross-platform** — auto-download works on Windows, macOS and Linux
 
 ## Supported MCUs
 
-| MCU | Flash | XRAM | IRAM | USB | Board file |
-|-----|-------|------|------|-----|------------|
-| **CH552G** | 14 KB (16 KB − 2 KB bootloader) | 1 KB | 256 B | Full-speed Device | `ch552g` |
-
-> More board definitions can be added — see [Adding a new board](#adding-a-new-board).
+| MCU | Flash | XRAM | EEPROM | USB | Board |
+|-----|-------|------|--------|-----|-------|
+| **CH551** | 10 KB | 512 B | — | Full-speed Device | `ch551` |
+| **CH552** | 14 KB | 1 KB | 128 B | Full-speed Device | `ch552` |
+| **CH554** | 14 KB | 1 KB | 128 B | Full-speed Host/Device | `ch554` |
+| **CH559** | 60 KB | 6 KB | 1 KB | Full-speed Host + Low-speed Hub | `ch559` |
 
 ## Installation
 
@@ -26,23 +31,7 @@ Uses the [ch55xduino](https://github.com/DeqingSun/ch55xduino) Arduino-like fram
 
 Follow the [PlatformIO installation guide](https://docs.platformio.org/en/latest/core/installation/index.html) or install the VS Code extension.
 
-### 2. Run the setup script
-
-The setup script downloads and installs the SDCC toolchain, ch55xduino framework, and upload tools into `~/.platformio/packages/`:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File setup.ps1
-```
-
-This installs:
-
-| Package | Description |
-|---------|-------------|
-| `toolchain-sdcc-ch55x` | SDCC compiler (custom MCS51 build) |
-| `framework-ch55xduino` | ch55xduino Arduino core |
-| `tool-ch55xtools` | vnproch55x upload tool |
-
-### 3. Reference the platform in your project
+### 2. Reference the platform in your project
 
 In your `platformio.ini`:
 
@@ -53,14 +42,13 @@ board = ch552g
 framework = arduino
 ```
 
-Or use a local path during development:
+That's it. On first `pio run`, the platform automatically downloads and installs:
 
-```ini
-[env:firmware]
-platform = /path/to/JQB_CH55XPlatform
-board = ch552g
-framework = arduino
-```
+| Package | Description |
+|---------|-------------|
+| `toolchain-sdcc-ch55x` | SDCC compiler (custom MCS51 build) |
+| `framework-ch55xduino` | ch55xduino Arduino core |
+| `tool-ch55xtools` | vnproch55x upload tool |
 
 ## Quick Start
 
@@ -71,8 +59,16 @@ framework = arduino
 platform = https://github.com/JAQUBA/JQB_CH55XPlatform.git
 board = ch552g
 framework = arduino
-build_flags =
-    -DUSER_USB_RAM=0
+```
+
+USB is auto-configured from board defaults (`usb_ram=148`). Override if needed:
+
+```ini
+; Disable USB (full XRAM available)
+board_build.usb_ram = 0
+
+; Custom USB RAM reservation
+board_build.usb_ram = 200
 ```
 
 ### Minimal `src/main.c`
@@ -106,37 +102,31 @@ pio run -t upload
 
 ## Configuration
 
-### Board-level options (`boards/ch552g.json`)
+### Board-level options (auto-configured)
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `build.f_cpu` | `24000000L` | CPU clock frequency |
-| `build.mcu` | `CH552` | MCU type (used as `-D` define) |
-| `build.variant` | `ch552` | ch55xduino variant directory |
-| `upload.maximum_size` | `14336` | Flash size in bytes |
-| `upload.maximum_ram_size` | `1024` | XRAM size in bytes |
-| `upload.xdata_location` | `0` | XRAM start address |
-| `upload.boot_config` | `3` | Bootloader config byte |
+These values are set in the board JSON and auto-applied by the builder:
+
+| Option | CH551 | CH552G | CH554 | CH559 | Description |
+|--------|-------|--------|-------|-------|-------------|
+| `build.usb_ram` | `0` | `148` | `148` | `148` | USB XRAM reservation (bytes) |
+| `build.total_xram` | `512` | `1024` | `1024` | `6144` | Total XRAM |
+| `build.ep0_addr` | `0` | `0` | `0` | `0` | EP0 address in USB RAM |
+| `build.ep1_addr` | `10` | `10` | `10` | `10` | EP1 address in USB RAM |
+| `build.ep2_addr` | `20` | `20` | `20` | `20` | EP2 address in USB RAM |
+
+The builder automatically derives from `usb_ram`:
+- `-DUSER_USB_RAM=<usb_ram>` (compiler define)
+- `-DEP0_ADDR`, `-DEP1_ADDR`, `-DEP2_ADDR` (endpoint addresses)
+- `--xram-loc <usb_ram>` (linker: XRAM start after USB region)
+- `--xram-size <total_xram - usb_ram>` (linker: available XRAM)
 
 ### Project-level overrides (`platformio.ini`)
 
 Override any board option:
 
 ```ini
-[env:firmware]
-platform = https://github.com/JAQUBA/JQB_CH55XPlatform.git
-board = ch552g
-framework = arduino
-
-; Custom USB endpoint allocation — reduce available XRAM
-board_upload.maximum_ram_size = 876
-board_upload.xdata_location = 148
-
-build_flags =
-    -DUSER_USB_RAM=148
-    -DEP0_ADDR=0
-    -DEP1_ADDR=10
-    -DEP2_ADDR=20
+board_build.usb_ram = 200
+board_build.ep2_addr = 80
 ```
 
 ## Project Structure
@@ -144,15 +134,17 @@ build_flags =
 ```
 JQB_CH55XPlatform/
 ├── platform.json          — PlatformIO platform manifest
-├── platform.py            — Platform class
+├── platform.py            — Platform class (auto-download packages)
 ├── sdcc_compat.h          — SDCC keyword stubs for IntelliSense
-├── setup.ps1              — Toolchain installer (Windows)
 ├── boards/
-│   └── ch552g.json        — WCH CH552G board definition
+│   ├── ch551.json         — WCH CH551
+│   ├── ch552g.json        — WCH CH552G
+│   ├── ch554.json         — WCH CH554
+│   └── ch559.json         — WCH CH559
 └── builder/
-    ├── main.py            — SCons build script (SDCC + IHX→BIN + upload)
+    ├── main.py            — SCons build script (auto-config + IHX→BIN + upload)
     └── frameworks/
-        └── arduino.py     — ch55xduino framework integration
+        └── arduino.py     — ch55xduino framework + library auto-detection
 ```
 
 ## How It Works
@@ -168,14 +160,14 @@ Source (.c) → SDCC → Object (.rel) → SDCC Linker → Intel HEX (.ihx) → 
 3. **Built-in IHX→BIN converter** creates raw binary
 4. **vnproch55x** flashes via USB bootloader
 
-### IntelliSense
+### Auto-configuration
 
-On every `pio run`, the builder auto-generates `.vscode/c_cpp_properties.json` with:
-- All include paths (SDCC stdlib, ch55xduino core, variant, libraries, project `src/`)
-- All `-D` defines from board config, CCFLAGS, and `build_flags`
-- Force-include of `sdcc_compat.h` — maps SDCC keywords to standard C equivalents
+On every `pio run`, the builder automatically:
 
-This means **zero manual VS Code configuration** for CH55x projects.
+1. **USB/XRAM** — reads `board_build.usb_ram` and derives all USB defines and linker flags
+2. **Include paths** — scans all `src/` subdirectories for `.h` files and adds them to CPPPATH
+3. **Libraries** — scans source files for `#include <Lib.h>` and auto-compiles matching ch55xduino libraries (WS2812, SPI, SoftI2C, etc.)
+4. **IntelliSense** — generates `.vscode/c_cpp_properties.json` with all paths, defines and `sdcc_compat.h`
 
 ### Upload
 
@@ -189,34 +181,6 @@ The uploader wraps `vnproch55x` with smart error handling:
 - **Hardware:** Hold the boot button while plugging in USB
 - **Software:** Send a bootloader command from your application (implementation-specific)
 
-## Adding a New Board
-
-Create a JSON file in `boards/`, e.g. `boards/ch551g.json`:
-
-```json
-{
-    "build": {
-        "f_cpu": "24000000L",
-        "f_osc_external": "0L",
-        "mcu": "CH551",
-        "variant": "ch551",
-        "core": "ch55xduino",
-        "board": "ch55x"
-    },
-    "frameworks": ["arduino"],
-    "name": "WCH CH551G",
-    "upload": {
-        "maximum_ram_size": 512,
-        "maximum_size": 10240,
-        "protocol": "ch55x",
-        "xdata_location": 0,
-        "boot_config": 3
-    },
-    "url": "https://www.wch-ic.com/products/CH551.html",
-    "vendor": "WCH"
-}
-```
-
 ## Important Notes for CH55x Development
 
 | Constraint | Details |
@@ -224,10 +188,10 @@ Create a JSON file in `boards/`, e.g. `boards/ch551g.json`:
 | **C only** | SDCC for MCS51 does not support C++. Use `.c` files. |
 | **No printf/sprintf** | Too large for 8051. Use manual conversion. |
 | **8-bit multiply overflow** | SDCC promotes to `int` (16-bit signed) — cast to `(uint16_t)` |
-| **USB Serial unavailable** | When using custom USB (`-DUSER_USB_RAM=N`), CDC is disabled |
+| **USB Serial unavailable** | When using custom USB (`usb_ram > 0`), CDC is disabled |
 | **P3.6/P3.7 reserved** | USB D+/D− lines — never use as GPIO |
 | **256 B IRAM** | Use `__data` for time-critical variables only |
-| **EEPROM = 128 B** | DataFlash — use `eeprom_read_byte()` / `eeprom_write_byte()` |
+| **EEPROM** | 128 B on CH552/CH554, 1 KB on CH559 — `eeprom_read_byte()` / `eeprom_write_byte()` |
 
 ## Credits
 
