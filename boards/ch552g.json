@@ -1,0 +1,21 @@
+{
+    "build": {
+        "f_cpu": "24000000L",
+        "f_osc_external": "0L",
+        "mcu": "CH552",
+        "variant": "ch552",
+        "core": "ch55xduino",
+        "board": "ch55x"
+    },
+    "frameworks": ["arduino"],
+    "name": "WCH CH552G",
+    "upload": {
+        "maximum_ram_size": 1024,
+        "maximum_size": 14336,
+        "protocol": "ch55x",
+        "xdata_location": 0,
+        "boot_config": 3
+    },
+    "url": "https://www.wch-ic.com/products/CH552.html",
+    "vendor": "WCH"
+}
