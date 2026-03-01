@@ -1,0 +1,26 @@
+{
+    "build": {
+        "f_cpu": "24000000L",
+        "f_osc_external": "0L",
+        "mcu": "CH551",
+        "variant": "ch551",
+        "core": "ch55xduino",
+        "board": "ch55x",
+        "total_xram": "512",
+        "usb_ram": "0",
+        "ep0_addr": "0",
+        "ep1_addr": "10",
+        "ep2_addr": "20"
+    },
+    "frameworks": ["arduino"],
+    "name": "WCH CH551",
+    "upload": {
+        "maximum_ram_size": 512,
+        "maximum_size": 10240,
+        "protocol": "ch55x",
+        "xdata_location": 0,
+        "boot_config": 3
+    },
+    "url": "https://www.wch-ic.com/products/CH551.html",
+    "vendor": "WCH"
+}

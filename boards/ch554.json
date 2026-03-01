@@ -1,0 +1,26 @@
+{
+    "build": {
+        "f_cpu": "24000000L",
+        "f_osc_external": "0L",
+        "mcu": "CH554",
+        "variant": "ch554",
+        "core": "ch55xduino",
+        "board": "ch55x",
+        "total_xram": "1024",
+        "usb_ram": "148",
+        "ep0_addr": "0",
+        "ep1_addr": "10",
+        "ep2_addr": "20"
+    },
+    "frameworks": ["arduino"],
+    "name": "WCH CH554",
+    "upload": {
+        "maximum_ram_size": 876,
+        "maximum_size": 14336,
+        "protocol": "ch55x",
+        "xdata_location": 148,
+        "boot_config": 3
+    },
+    "url": "https://www.wch-ic.com/products/CH554.html",
+    "vendor": "WCH"
+}

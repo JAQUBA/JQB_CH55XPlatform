@@ -35,7 +35,7 @@
     "packages": {
         "toolchain-sdcc-ch55x": {
             "type": "toolchain",
-            "optional": false
+            "optional": true
         },
         "framework-ch55xduino": {
             "type": "framework",

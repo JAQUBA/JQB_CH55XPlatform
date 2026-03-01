@@ -1,0 +1,26 @@
+{
+    "build": {
+        "f_cpu": "24000000L",
+        "f_osc_external": "0L",
+        "mcu": "CH559",
+        "variant": "ch559",
+        "core": "ch55xduino",
+        "board": "ch55x",
+        "total_xram": "6144",
+        "usb_ram": "148",
+        "ep0_addr": "0",
+        "ep1_addr": "10",
+        "ep2_addr": "20"
+    },
+    "frameworks": ["arduino"],
+    "name": "WCH CH559",
+    "upload": {
+        "maximum_ram_size": 5996,
+        "maximum_size": 61440,
+        "protocol": "ch55x",
+        "xdata_location": 148,
+        "boot_config": 3
+    },
+    "url": "https://www.wch-ic.com/products/CH559.html",
+    "vendor": "WCH"
+}

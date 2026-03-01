@@ -30,7 +30,7 @@ board = env.BoardConfig()
 
 # ---------------------------------------------------------------------------
 # Resolve package directories
-# Packages are installed by setup.ps1 into ~/.platformio/packages/
+# Auto-installed by platform.py on first build into ~/.platformio/packages/
 # ---------------------------------------------------------------------------
 
 PLATFORMIO_PACKAGES = join(os.path.expanduser("~"), ".platformio", "packages")
@@ -41,8 +41,8 @@ tools_dir = join(PLATFORMIO_PACKAGES, "tool-ch55xtools")
 
 assert isdir(toolchain_dir), (
     "SDCC toolchain not found at: %s\n"
-    "Run the setup script first.\n"
-    "See: https://github.com/JAQUBA/JQB_CH55XPlatform#installation"
+    "Auto-install may have failed. Check network connection and retry.\n"
+    "See: https://github.com/JAQUBA/JQB_CH55XPlatform"
     % toolchain_dir
 )
 
