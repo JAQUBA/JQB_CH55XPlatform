@@ -46,7 +46,7 @@ _PACKAGES = [
         "name": "tool-ch55xtools",
         "version": "0.0.1",
         "description": "CH55x upload tools (vnproch55x)",
-        "strip_root": "ch55xduino",
+        "strip_root": "",
         "urls": {
             "win32":  "https://github.com/DeqingSun/ch55xduino/releases/download/0.0.20/ch55xduino-tools_mingw32-2023.10.10.tar.bz2",
             "darwin": "https://github.com/DeqingSun/ch55xduino/releases/download/0.0.20/ch55xduino-tools_macOS-2023.10.10.tar.bz2",
